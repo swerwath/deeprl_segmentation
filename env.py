@@ -80,7 +80,7 @@ class Environment():
     def reset(self):
         self.curr_image, self.curr_mask = self.generator_fn.next()
         assert(self.curr_image.shape == self.img_shape)
-        assert(self.curr_mask.shape == self.img_shape)
+        assert(self.curr_mask.shape[:2] == self.img_shape)
 
         self.curr_blurred_mask = gaussian_filter(self.curr_mask.astype(np.float32), self.gaussian_std)
         self.curr_mask = self.curr_mask.astype(np.bool_)
