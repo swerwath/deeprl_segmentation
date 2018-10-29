@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Data and COCO related stuff
+/annotations
+/val2017
+/cocoapi
+/proc/
