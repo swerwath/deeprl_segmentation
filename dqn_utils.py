@@ -247,15 +247,15 @@ class ReplayBuffer(object):
         -------
         obs_batch: np.array
             Array of shape
-            (batch_size, img_h, img_w, img_c * frame_history_len)
+            (batch_size, img_h, img_w, img_c + 3)
             and dtype np.uint8
         act_batch: np.array
-            Array of shape (batch_size,) and dtype np.int32
+            Array of shape (batch_size, 3, 256, 256) and dtype np.int32
         rew_batch: np.array
             Array of shape (batch_size,) and dtype np.float32
         next_obs_batch: np.array
             Array of shape
-            (batch_size, img_h, img_w, img_c * frame_history_len)
+            (batch_size, img_h, img_w, img_c + 3)
             and dtype np.uint8
         done_mask: np.array
             Array of shape (batch_size,) and dtype np.float32
@@ -301,14 +301,15 @@ class ReplayBuffer(object):
         ---------
         idx: int
             Index in buffer of recently observed frame (returned by `store_frame`).
-        action: int
-            Action that was performed upon observing this frame.
+        action: ((3), 256, 256)
+            Tuple representing pen-down/pen-up/draw-finish and the corresponding next pen location
         reward: float
             Reward that was received when the actions was performed.
         done: bool
             True if episode was finished after performing that action.
         """
-        self.action[idx] = action
+        self.action[idx] = np.zeros((3, 256, 256), dtype=np.int32)
+        self.action[idx][action[0]] = action[1]
         self.reward[idx] = reward
         self.done[idx]   = done
 
