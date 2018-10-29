@@ -10,6 +10,11 @@ annFile='annotations/instances_{}.json'.format(DATA_TYPE)
 PROC_DATA_DIR = "proc"
 SIZE = 256
 
+
+def merge_masks(masks):
+    # Merges the binary 0-1 masks using bitwise OR
+    return np.expand_dims(np.bitwise_or.reduce(masks, axis=2),axis=2)
+
 def main():
     coco = COCO(annFile)
     catIds = coco.getCatIds(catNms=['person'])
@@ -29,11 +34,11 @@ def main():
             continue
         count +=1
         I = io.imread('%s%s/%s'%(DATA_DIR,DATA_TYPE,img['file_name']))
-        cropped = I[:SIZE][:SIZE]
+        cropped = I[:SIZE, :SIZE]
         annotation_ids = coco.getAnnIds(imgIds=img['id'])
         annotations = coco.loadAnns(ids=annotation_ids)
-        masks = np.array([coco.annToMask(ann) for ann in annotations])
-        cropped_masks = [mask[:SIZE][:SIZE] for mask in masks]
+        masks = [coco.annToMask(ann) for ann in annotations]
+        cropped_masks = merge_masks(np.stack([mask[:SIZE, :SIZE] for mask in masks], axis=-1))
         io.imsave('%s/%s/images/%s'%(PROC_DATA_DIR,DATA_TYPE,img['file_name']), cropped)
         np.save('%s/%s/masks/%s'%(PROC_DATA_DIR,DATA_TYPE,img['file_name']), cropped_masks)
     print("Processed " + str(count) + " images")
