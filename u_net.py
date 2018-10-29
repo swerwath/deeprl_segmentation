@@ -13,8 +13,10 @@ def deconv(input_layer, filter_size, output_size, out_channel, in_channel, name,
 
 #Defines the unet structure, given a batch of input images of size 256 x 256
 #Input: img_input is a tf Tensor of shape [batch_size, 256, 256, 1]. img_input should have type 'float32'. 
+#Optional Args: scope name, reuse (added for compatibility purposes)
 #Output: Returns a tensor of shape [batch_size, 256, 256, 1] representing the q-values. 
-def build_unet(img_input):
+def build_unet(img_input, name = "default", reuse = False):
+    batch_size = img_input.get_shape()[0]
     res = img_input #256 x 256
     res = conv(res, 32 ,3, 'F0', strides = (2, 2)) #128 x 128
     res = conv(res, 64, 3, 'F1', strides = (2,2)) #64 x 64
@@ -33,14 +35,16 @@ def build_unet(img_input):
     res = deconv(res, 3, 128, 32, 64, 'B3', strides = (2,2)) #128 x 128
     res = tf.nn.relu(res)
 
-    res = deconv(res, 3, 256, 1, 32, 'B4', strides = (2,2)) #256 x 256
+    res = deconv(res, 3, 256, 3, 32, 'B4', strides = (2,2)) #256 x 256
     res = tf.nn.relu(res)
+    res = tf.reshape(res, [batch_size, 3, 256, 256])
     return res 
 
 #Example usage
 def main():
     img = tf.convert_to_tensor(np.random.uniform(0, 1, size = (10, 256, 256, 1)).astype('float32'))
     ans = build_unet(img)
+    #print(ans.get_shape())
 
 if __name__ == "__main__":
     main()
