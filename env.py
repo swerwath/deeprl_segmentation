@@ -9,11 +9,12 @@ FINISH = 2
 class Environment():
     # Pulls in new images with generator_fn
     # generator_fn should return a preprocessed image and a segmentation mask
-    def __init__(self, generator_fn, gaussian_std=2.0, img_shape=(256,256), alpha=0.05):
+    def __init__(self, generator_fn, gaussian_std=2.0, img_shape=(256,256), alpha=0.05, max_line_len=50):
         self.generator_fn = generator_fn
         self.gaussian_std = gaussian_std
         self.img_shape = img_shape
-        self.alpha = 0.05
+        self.alpha = alpha
+        self.max_line_len = max_line_len
 
         self.curr_image = None
         self.curr_mask = None
@@ -53,6 +54,10 @@ class Environment():
                 prev_vertex_x, prev_vertex_y = np.where(self.state_map[3] == 1)
                 prev_vertex_x = prev_vertex_x[0]
                 prev_vertex_y = prev_vertex_y[0]
+
+                # Penalize illegal placements
+                if np.hypot(coord_x - prev_vertex_x, coord_y - prev_vertex_y) > self.max_line_len:
+                    return self._get_state(), -1, False
 
                 line_x, line_y = self._get_line_coordinates(prev_vertex_x, prev_vertex_y, coord_x, coord_y)
                 rew = self._contour_reward(line_x, line_y)
