@@ -232,10 +232,10 @@ class QLearner(object):
             return 2 + x_rnd * img_size + y_rnd
         elif epsilon_flip < 2/3:
             # Pen up
-            return 1
+            return 0
         else:
             # Draw finish
-            return 2
+            return 1
 
 
     def step_env(self):
@@ -274,8 +274,7 @@ class QLearner(object):
                 action = self.choose_random_action(self.last_obs)
             else:
                 q_values = self.session.run(tf.squeeze(self.q_action), {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
-                action_tuple = np.unravel_index(np.argmax(q_values), q_values.shape)
-                action = (action_tuple[0], (action_tuple[1], action_tuple[2]))
+                action = np.argmax(q_values)
         obs, reward, done = self.env.step(action)
         self.replay_buffer.store_effect(buf_idx, action, reward, done)
         if done:
@@ -377,14 +376,8 @@ class QLearner(object):
         done = False
         self.last_obs = test_env.reset()
         while(not done):
-            q_map, q_class = self.session.run([tf.squeeze(self.q_map), tf.squeeze(self.q_class)], {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
-            pen_down_tuple = np.unravel_index(np.argmax(q_map), q_map.shape)
-            q_class[0] = q_map[pen_down_tuple[0]][pen_down_tuple[1]]
-            opt_action = np.argmax(q_class)
-            if opt_action == 0:
-                action = (0, pen_down_tuple)
-            else:
-                action = (action, (0, 0))
+            q_values = self.session.run([tf.squeeze(self.q_action)], {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
+            action = np.argmax(q_values)
             obs, reward, done = test_env.step(action)
             self.last_obs = obs
         return self.last_obs[:,:,:4], reward
