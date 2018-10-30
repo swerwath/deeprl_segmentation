@@ -218,10 +218,10 @@ class ReplayBuffer(object):
         return batch_size + 1 <= self.num_in_buffer
 
     def get_sample(self, idxes):
-        obs_batch      = np.concatenate([self.obs[idx] for idx in idxes], 0)
+        obs_batch      = np.array([self.obs[idx] for idx in idxes])
         act_batch      = self.action[idxes]
         rew_batch      = self.reward[idxes]
-        next_obs_batch = np.concatenate([self.obs[idx + 1] for idx in idxes], 0)
+        next_obs_batch = np.array([self.obs[idx + 1] for idx in idxes])
         done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask

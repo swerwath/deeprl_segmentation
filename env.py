@@ -83,8 +83,6 @@ class Environment():
         self.curr_image, self.curr_mask = next(self.generator)
         if len(self.curr_mask.shape) == 3:
             self.curr_mask = self.curr_mask[:,:,0]
-        print(self.curr_mask.shape)
-        print(self.img_shape[:2])
         assert(self.curr_image.shape == self.img_shape)
         assert(self.curr_mask.shape == self.img_shape[:2])
 
@@ -95,8 +93,11 @@ class Environment():
         self.last_action = PEN_UP
         self.first_vertex = None
 
+        first_state = self._get_state()
+        return first_state
+
     def _get_state(self):
-        return np.concatenate((self.curr_image, self.state_map))
+        return np.concatenate((self.curr_image, np.transpose(self.state_map)), axis=-1)
     
     def _contour_reward(self, line_x, line_y):
         rew = 0.0

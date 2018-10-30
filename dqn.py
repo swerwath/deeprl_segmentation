@@ -206,8 +206,6 @@ class QLearner(object):
         logdir = 'img-'
         logdir = logdir + time.strftime("%d-%m-%Y_%H-%M-%S")
         logdir = os.path.join('data', logdir)
-        if not(os.path.exists(logdir)):
-            os.makedirs(logdir)
         logz.configure_output_dir(logdir)
 
 
