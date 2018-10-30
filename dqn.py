@@ -15,6 +15,7 @@ import time
 import logz
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
+img_size = 256
 
 class QLearner(object):
 
@@ -105,14 +106,15 @@ class QLearner(object):
         # BUILD MODEL #
         ###############
 
-        input_shape = (256, 256, 6)
-        action_shape = (3)
+        
+        input_shape = (img_size, img_size, 6)
+        action_dim = 2 + img_size * img_size
         
         # set up placeholders
         # placeholder for current observation (or state)
         self.obs_t_ph              = tf.placeholder(tf.uint8, [None] + list(input_shape))
         # placeholder for current action
-        self.act_t_ph              = tf.placeholder(tf.int32,   [None] + list(action_shape))
+        self.act_t_ph              = tf.placeholder(tf.int32,   [None])
         # placeholder for current reward
         self.rew_t_ph              = tf.placeholder(tf.float32, [None])
         # placeholder for next observation (or state)
@@ -148,39 +150,19 @@ class QLearner(object):
         ######
 
         # YOUR CODE HERE
-        self.q_map, self.q_class = q_func(obs_t_float, 'q_func', reuse=False)
-        self.target_map, self.target_class = q_func(obs_tp1_float, 'target_func', reuse=False)
-        ######
-        # Q-Values
-        # Current shapes: (batch, 256, 256) and (batch, 3)
-        # Needed: (batch) q_values
-        ######
-        cat_idx = tf.concat([tf.range(0, tf.shape(self.act_t_ph)[0]), self.act_t_ph], axis=1)
-        # Takes action tensor of (batch size, 3), and yields (batch size, 4), where the first col is now the batch id for each/row number
-        pen_down_mask = tf.equal(cat_idx[:, 1], tf.constant([0]))
-        pen_down_actions = tf.boolean_mask(cat_idx, pen_down_mask)
-        other_actions = tf.boolean_mask(cat_idx, tf.logical_not(pen_down_mask))[:, :2]
-        # Action tensor of the shape (batch_size - k, 2), each row is of the form (batch_id, 1 or 2)
-        other_q_values = tf.gather_nd(self.q_class, other_actions)
-        pen_down_actions = tf.concat([pen_down_actions[:, 0], pen_down_actions[:, 2:]], axis=1)
-        # Action tensor of the shape (k, 3), each row of the form (batch_id, x, y)
-        pen_down_q_values = tf.gather_nd(self.q_map, pen_down_actions)
-        # We now have two tensors; (batch_size - k), (k), but we need to combine them in the right order based on their batch id
-        # We do this by augmenting the q_values with the batch ids they came from, then sorting over the batch id
-        other_q_value_batch = tf.stack([other_actions[:, 0], other_q_values], axis=1)
-        pen_down_q_value_batch = tf.stack([pen_down_actions[:, 0], pen_down_q_values], axis=1)
-        current_q_values_batch = tf.concat([other_q_value_batch, pen_down_q_value_batch], axis=0)
-        current_q_values = tf.contrib.framework.sort(current_q_values_batch, axis=0)[:, 1]
-        #######
-        # Target Values
-        #######
-        pen_down_q_targets = tf.reduce_max(self.target_map, axis=tf.constant([1, 2]))
-        other_q_targets = tf.reduce_max(self.target_class[:, 1:])
-        # Two sets of targets, of size (batch, ) and (batch, )
-        q_targets = tf.reduce_max(tf.stack([pen_down_q_targets, other_q_targets], axis=1), axis=1)
-        # Form a matrix of size (batch, 2), and then reduce down to (batch,)
-        gamma_max_future_q_targets = tf.scalar_mul(gamma, q_targets)
+        self.q_action = q_func(obs_t_float, 'q_func', reuse=False)
+        self.target_q_action = q_func(obs_tp1_float, 'target_func', reuse=False)
+        if double_q:
+            target_actions = tf.argmax(self.q_action, output_type=tf.int32)
+            action_idx = tf.stack([tf.range(0, tf.shape(self.q_action)[0]), target_actions], axis=1)
+            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.gather_nd(self.target_q_action, action_idx))
+        else:
+            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.reduce_max(self.target_q_action))
+        
         q_targets = tf.stop_gradient(tf.add(self.rew_t_ph, gamma_max_future_q_targets - tf.multiply(self.done_mask_ph, gamma_max_future_q_targets)))
+        idx = tf.range(0, tf.shape(self.act_t_ph)[0])
+        cat_idx = tf.stack([idx, self.act_t_ph], axis=1)
+        current_q_values = tf.gather_nd(self.q_action, cat_idx)
         self.total_error = tf.reduce_sum(huber_loss(current_q_values - q_targets))
         q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
         target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_func')
@@ -247,13 +229,13 @@ class QLearner(object):
                 x_min, y_min = max(0, pen_x - self.pixel_limit//2), max(0, pen_y - self.pixel_limit//2)
                 x_max, y_max = min(pen_x + self.pixel_limit//2, x_dim - 1),  min(pen_y + self.pixel_limit//2, y_dim - 1)
                 x_rnd, y_rnd = np.random.randint(x_min, x_max), np.random.randint(y_min, y_max)
-            return (0, (x_rnd, y_rnd))
+            return 2 + x_rnd * img_size + y_rnd
         elif epsilon_flip < 2/3:
             # Pen up
-            return (1, (0, 0))
+            return 1
         else:
             # Draw finish
-            return (2, (0, 0))
+            return 2
 
 
     def step_env(self):
@@ -291,14 +273,9 @@ class QLearner(object):
             if epsilon_flip == 1:
                 action = self.choose_random_action(self.last_obs)
             else:
-                q_map, q_class = self.session.run([tf.squeeze(self.q_map), tf.squeeze(self.q_class)], {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
-                pen_down_tuple = np.unravel_index(np.argmax(q_map), q_map.shape)
-                q_class[0] = q_map[pen_down_tuple[0]][pen_down_tuple[1]]
-                opt_action = np.argmax(q_class)
-                if opt_action == 0:
-                    action = (0, pen_down_tuple)
-                else:
-                    action = (action, (0, 0))
+                q_values = self.session.run(tf.squeeze(self.q_action), {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
+                action_tuple = np.unravel_index(np.argmax(q_values), q_values.shape)
+                action = (action_tuple[0], (action_tuple[1], action_tuple[2]))
         obs, reward, done = self.env.step(action)
         self.replay_buffer.store_effect(buf_idx, action, reward, done)
         if done:
