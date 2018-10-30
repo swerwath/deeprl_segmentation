@@ -8,7 +8,7 @@ from env import Environment
 import dqn
 from dqn_utils import *
 from u_net import build_unet
-from data_generator import generator_fn, test_generator_fn
+from data_generator import generator_fn
 
 
 
@@ -78,11 +78,11 @@ def get_session():
 
 def main():
     # Run training
-    env = Environment(generator_fn)
-    test_env = Environment(test_generator_fn)
+    env = Environment(generator_fn(), img_shape=(256,256,3))
+    #test_env = Environment(test_generator_fn)
     session = get_session()
     alg = img_segment_learn(env, session, num_timesteps=2e8)
-    test_results, test_rewards = alg.test(test_env, num_test_samples=1000)
+    #test_results, test_rewards = alg.test(test_env, num_test_samples=1000)
 
     
 

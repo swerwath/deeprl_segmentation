@@ -9,8 +9,8 @@ FINISH = 2
 class Environment():
     # Pulls in new images with generator_fn
     # generator_fn should return a preprocessed image and a segmentation mask
-    def __init__(self, generator_fn, gaussian_std=2.0, img_shape=(256,256), alpha=0.05, max_line_len=50):
-        self.generator_fn = generator_fn
+    def __init__(self, generator, gaussian_std=2.0, img_shape=(256,256), alpha=0.05, max_line_len=50):
+        self.generator = generator
         self.gaussian_std = gaussian_std
         self.img_shape = img_shape
         self.alpha = alpha
@@ -78,9 +78,13 @@ class Environment():
     
     # Returns initial state
     def reset(self):
-        self.curr_image, self.curr_mask = self.generator_fn.next()
+        self.curr_image, self.curr_mask = next(self.generator)
+        if len(self.curr_mask.shape) == 3:
+            self.curr_mask = self.curr_mask[:,:,0]
+        print(self.curr_mask.shape)
+        print(self.img_shape[:2])
         assert(self.curr_image.shape == self.img_shape)
-        assert(self.curr_mask.shape[:2] == self.img_shape)
+        assert(self.curr_mask.shape == self.img_shape[:2])
 
         self.curr_blurred_mask = gaussian_filter(self.curr_mask.astype(np.float32), self.gaussian_std)
         self.curr_mask = self.curr_mask.astype(np.bool_)

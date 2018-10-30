@@ -1,10 +1,10 @@
-from cocoapi.PythonAPI.pycocotools.coco import COCO
+from pycocotools.coco import COCO
 import numpy as np
 import skimage.io as io
 import os
 import time
 
-DATA_TYPE = "val2017"
+DATA_TYPE = "train2017"
 DATA_DIR=""
 annFile='annotations/instances_{}.json'.format(DATA_TYPE)
 PROC_DATA_DIR = "proc"
