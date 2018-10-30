@@ -26,12 +26,14 @@ class Environment():
         self.reset()
 
     # Returns (new_state, reward, done)
-    # Action should be (int, (int, int))
-    # First int is 0 = pen down, 1 = pen up, 2 = finish 
-    # Int tuple is coordinates for pen down
-    # New state is 
+    # Action should be int: 0 = pen up, 1 = finish, other = index into array
     def step(self, action):
-        action_class, (coord_x, coord_y) = action
+        action_class = PEN_DOWN if action > 1 else action
+        coord_x, coord_y = (-1,-1)
+        if action_class == PEN_DOWN:
+            coord_x = action // self.img_shape[0]
+            coord_y = action % self.img_shape[0]
+
         if self.last_action == PEN_UP:
             if action_class == PEN_UP:
                 return self._get_state(), -1.0, False

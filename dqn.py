@@ -111,7 +111,7 @@ class QLearner(object):
         # placeholder for current observation (or state)
         self.obs_t_ph              = tf.placeholder(tf.uint8, [None] + list(input_shape))
         # placeholder for current action
-        self.act_t_ph              = tf.placeholder(tf.int32,   [None, action_dim])
+        self.act_t_ph              = tf.placeholder(tf.int32,   [None])
         # placeholder for current reward
         self.rew_t_ph              = tf.placeholder(tf.float32, [None])
         # placeholder for next observation (or state)
@@ -157,7 +157,8 @@ class QLearner(object):
             gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.reduce_max(self.target_q_action))
         
         q_targets = tf.stop_gradient(tf.add(self.rew_t_ph, gamma_max_future_q_targets - tf.multiply(self.done_mask_ph, gamma_max_future_q_targets)))
-        cat_idx = tf.stack([tf.range(0, tf.shape(self.act_t_ph)[0]), self.act_t_ph], axis=1)
+        idx = tf.range(0, tf.shape(self.act_t_ph)[0])
+        cat_idx = tf.stack([idx, self.act_t_ph], axis=1)
         current_q_values = tf.gather_nd(self.q_action, cat_idx)
         self.total_error = tf.reduce_sum(huber_loss(current_q_values - q_targets))
         q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
