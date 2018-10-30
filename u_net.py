@@ -6,7 +6,7 @@ def conv(input_layer, filter_size, kernel_size, name, strides, padding = "SAME",
     output = tf.layers.conv2d(input_layer, filters = filter_size, kernel_size = kernel_size, name = name, strides = strides, padding = padding, activation = activation)
     return output
     
-def deconv(input_layer, filter_size, output_size, out_channel, in_channel, name, strides = [1, 2, 2, 1], padding = "SAME"):
+def deconv(input_layer, filter_size, output_size, out_channel, in_channel, name, strides = [1, 1, 1, 1], padding = "SAME"):
     batch_size = tf.shape(input_layer)[0]
     output = tf.nn.conv2d_transpose(input_layer, tf.get_variable(name = name, shape = [filter_size, filter_size, out_channel, in_channel]), tf.stack([batch_size, output_size, output_size, out_channel]), strides = strides, padding = padding)
     return output
@@ -22,7 +22,6 @@ def build_unet(img_input, scope = "default", reuse = False):
         res = conv(res, 64, 3, 'F1', strides = (2,2)) #64 x 64
         res = conv(res, 128, 3, 'F2', strides = (2,2)) #32 x 32
         res = conv(res, 256, 3, 'F3', strides = (2,2)) #16 x 16
-        print(res.shape)
         
         #2 FC layers to get the convolved tensor down to 3 values for pen-state
         pen_states = tf.contrib.layers.flatten(res)
@@ -50,8 +49,8 @@ def build_unet(img_input, scope = "default", reuse = False):
 #Example usage
 def main():
     img = tf.convert_to_tensor(np.random.uniform(0, 1, size = (10, 256, 256, 6)).astype('float32'))
-    ans, pen = build_unet(img)
-    print(ans.get_shape(), pen.get_shape())
+    ans = build_unet(img)
+    print(ans.get_shape())
 
 if __name__ == "__main__":
     main()
