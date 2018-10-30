@@ -17,7 +17,6 @@ def deconv(input_layer, filter_size, output_size, out_channel, in_channel, name,
 #Output: Returns a tensor of shape [batch_size, 256, 256, 1] representing the q-values. 
 def build_unet(img_input, scope = "default", reuse = False):
     with tf.variable_scope(scope, reuse=reuse):
-        batch_size = tf.shape(img_input)[0]
         res = img_input #256 x 256
         res = conv(res, 32 ,3, 'F0', strides = (2, 2)) #128 x 128
         res = conv(res, 64, 3, 'F1', strides = (2,2)) #64 x 64
@@ -27,7 +26,7 @@ def build_unet(img_input, scope = "default", reuse = False):
         #2 FC layers to get the convolved tensor down to 3 values for pen-state
         pen_states = tf.contrib.layers.flatten(res)
         pen_states = tf.contrib.layers.fully_connected(pen_states, 300)
-        pen_states = tf.contrib.layers.fully_connected(pen_states, 3)
+        pen_states = tf.contrib.layers.fully_connected(pen_states, 2)
 
         #Up-convolve
         res = deconv(res, 3, 16, 256, 256, 'B0') #16 x 16
@@ -44,7 +43,7 @@ def build_unet(img_input, scope = "default", reuse = False):
 
         res = deconv(res, 3, 256, 1, 32, 'B4', strides = (2,2)) #256 x 256
         res = tf.squeeze(tf.nn.relu(res))
-        return res, pen_states 
+        return tf.concat([pen_states, tf.contrib.layers.flatten(res)])
 
 #Example usage
 def main():
