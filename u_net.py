@@ -23,6 +23,12 @@ def build_unet(img_input, scope = "default", reuse = False):
         res = conv(res, 64, 3, 'F1', strides = (2,2)) #64 x 64
         res = conv(res, 128, 3, 'F2', strides = (2,2)) #32 x 32
         res = conv(res, 256, 3, 'F3', strides = (2,2)) #16 x 16
+        
+        #2 FC layers to get the convolved tensor down to 3 values for pen-state
+        pen_states = tf.contrib.layers.flatten(res)
+        pen_states = tf.contrib.layers.fully_connected(pen_states, 300)
+        pen_states = tf.contrib.layers.fully_connected(pen_states, 3)
+
         #Up-convolve
         res = deconv(res, 3, 16, 256, 256, 'B0') #16 x 16
         res = tf.nn.relu(res)
@@ -36,16 +42,15 @@ def build_unet(img_input, scope = "default", reuse = False):
         res = deconv(res, 3, 128, 32, 64, 'B3', strides = (2,2)) #128 x 128
         res = tf.nn.relu(res)
 
-        res = deconv(res, 3, 256, 3, 32, 'B4', strides = (2,2)) #256 x 256
-        res = tf.nn.relu(res)
-        res = tf.reshape(res, [batch_size, 3, 256, 256])
-        return res 
+        res = deconv(res, 3, 256, 1, 32, 'B4', strides = (2,2)) #256 x 256
+        res = tf.squeeze(tf.nn.relu(res))
+        return res, pen_states 
 
 #Example usage
 def main():
-    img = tf.convert_to_tensor(np.random.uniform(0, 1, size = (10, 256, 256, 1)).astype('float32'))
-    ans = build_unet(img)
-    #print(ans.get_shape())
+    img = tf.convert_to_tensor(np.random.uniform(0, 1, size = (10, 256, 256, 6)).astype('float32'))
+    ans, pen = build_unet(img)
+    print(ans.get_shape(), pen.get_shape())
 
 if __name__ == "__main__":
     main()
