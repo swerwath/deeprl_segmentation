@@ -250,7 +250,7 @@ class ReplayBuffer(object):
             (batch_size, img_h, img_w, img_c + 3)
             and dtype np.uint8
         act_batch: np.array
-            Array of shape (batch_size, 3) and dtype np.int32
+            Array of shape (batch_size) and dtype np.int32
         rew_batch: np.array
             Array of shape (batch_size,) and dtype np.float32
         next_obs_batch: np.array
@@ -282,9 +282,9 @@ class ReplayBuffer(object):
         if self.obs is None:
             print('Obs expected size, ', [self.size] + list(new_obs.shape))
             self.obs      = np.empty([self.size] + list(new_obs.shape), dtype=np.uint8)
-            self.action   = np.empty([self.size] + [3],                dtype=np.uint8)
-            self.reward   = np.empty([self.size],                     dtype=np.float32)
-            self.done     = np.empty([self.size],                     dtype=np.bool)
+            self.action   = np.empty([self.size],                       dtype=np.uint8)
+            self.reward   = np.empty([self.size],                       dtype=np.float32)
+            self.done     = np.empty([self.size],                       dtype=np.bool)
         self.obs[self.next_idx] = new_obs
         ret = self.next_idx
         self.next_idx = (self.next_idx + 1) % self.size
@@ -308,7 +308,7 @@ class ReplayBuffer(object):
         done: bool
             True if episode was finished after performing that action.
         """
-        self.action[idx] = np.array([action[0], action[0][0], action[0][1]])
+        self.action[idx] = action
         self.reward[idx] = reward
         self.done[idx]   = done
 
