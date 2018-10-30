@@ -31,11 +31,6 @@ def img_segment_learn(env,
         lr_schedule=lr_schedule
     )
 
-    def stopping_criterion(env, t):
-        # notice that here t is the number of steps of the wrapped env,
-        # which is different from the number of steps in the underlying env
-        return get_wrapper_by_name(env, "Monitor").get_total_steps() >= num_timesteps
-
     exploration_schedule = PiecewiseSchedule(
         [
             (0, 1.0),
