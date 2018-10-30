@@ -1,4 +1,5 @@
 import argparse
+import os
 import os.path as osp
 import random
 import numpy as np
@@ -8,9 +9,9 @@ from env import Environment
 import dqn
 from dqn_utils import *
 from u_net import build_unet
-from data_generator import generator_fn
+from data_generator import generator_fn, DATA_TYPE
 
-
+TRAIN_DATA_DIR = "train"
 
 def img_segment_learn(env,
                 session,
@@ -76,7 +77,17 @@ def main():
     #test_env = Environment(test_generator_fn)
     session = get_session()
     alg = img_segment_learn(env, session, num_timesteps=2e8)
-    #test_results, test_rewards = alg.test(test_env, num_test_samples=1000)
+    training_results, training_rewards = alg.test(env, num_test_samples = 1000)
+    training_result_dir = '%s/%s/results'%(TRAIN_DATA_DIR,DATA_TYPE)
+    os.makedirs(training_result_dir)
+    i = 0
+    reward_sum = 0
+    for result, reward in zip(training_results, training_rewards):
+        result_file_name = "result_" + str(i) + ".npy"
+        np.save('%s/%s'%(training_result_dir, result_file_name), result)
+        reward_sum += reward
+        i += 1
+    print("Average reward ", str(reward_sum))
 
     
 

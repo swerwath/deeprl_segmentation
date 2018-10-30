@@ -155,7 +155,7 @@ class QLearner(object):
         # Current shapes: (batch, 256, 256) and (batch, 3)
         # Needed: (batch) q_values
         ######
-        cat_idx = tf.stack([tf.range(0, tf.shape(self.act_t_ph)[0]), self.act_t_ph], axis=1)
+        cat_idx = tf.concat([tf.range(0, tf.shape(self.act_t_ph)[0]), self.act_t_ph], axis=1)
         # Takes action tensor of (batch size, 3), and yields (batch size, 4), where the first col is now the batch id for each/row number
         pen_down_mask = tf.equal(cat_idx[:, 1], tf.constant([0]))
         pen_down_actions = tf.boolean_mask(cat_idx, pen_down_mask)
