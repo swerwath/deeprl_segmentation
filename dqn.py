@@ -393,6 +393,7 @@ class QLearner(object):
             obs, reward, done = test_env.step(action)
             self.last_obs = obs
             reward_sum += reward
+            count += 1
         if not done:
             # Run a pen finish
             action = 1
