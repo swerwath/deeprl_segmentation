@@ -36,7 +36,8 @@ class QLearner(object):
         grad_norm_clipping=10,
         pixel_limit=50,
         rew_file=None,
-        double_q=False):
+        double_q=False,
+        progress_dir=None):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using q_func.
@@ -89,6 +90,8 @@ class QLearner(object):
         double_q: bool
             If True, then use double Q-learning to compute target values. Otherwise, use vanilla DQN.
             https://papers.nips.cc/paper/3964-double-q-learning.pdf
+        progress_dir: str
+            Place to store logged image+masks for reference (helps if you have to terminate early)
         """
         self.target_update_freq = target_update_freq
         self.optimizer_spec = optimizer_spec
@@ -101,6 +104,7 @@ class QLearner(object):
         self.exploration = exploration
         self.rew_file = str(uuid.uuid4()) + '.pkl' if rew_file is None else rew_file
         self.pixel_limit = pixel_limit
+        self.progress_dir = progress_dir
 
         ###############
         # BUILD MODEL #
@@ -349,7 +353,9 @@ class QLearner(object):
     def log_progress(self):
         if self.t % self.log_every_n_steps == 0 and self.model_initialized:
             log_episodes = 5
-            episode_rewards = [self.predict(self.env)[1] for i in range(log_episodes)]
+            episodes = [self.predict(self.env) for i in range(log_episodes)]
+            episode_results = [prediction[0] for prediction in episodes]
+            episode_rewards = [prediction[1] for prediction in episodes]
             self.mean_episode_reward = sum(episode_rewards)/len(episode_rewards)
             self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
             print("Timestep %d" % (self.t,))
@@ -367,18 +373,33 @@ class QLearner(object):
             sys.stdout.flush()
             with open(self.rew_file, 'wb') as f:
                 pickle.dump(episode_rewards, f, pickle.HIGHEST_PROTOCOL)
+            if self.progress_dir is None:
+                return
+            for count, result in enumerate(episode_results):
+                result_file_name = "result_" + str(count) + "_t_" + str(self.t) + ".npy"
+                np.save('%s/%s'%(self.progress_dir, result_file_name), result)
+
     
     def predict(self, test_env):
         # Runs the prediction algorithm on one image, and returns [img_c_1, img_c_2, img_c_3, img_mask], reward
         # since we no longer need the last two, and to keep the reward for logging purposes
         done = False
         self.last_obs = test_env.reset()
-        while(not done):
+        count = 0
+        reward_sum = 0
+        while(not done and count < 100):
             q_values = self.session.run([tf.squeeze(self.q_action)], {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
             action = np.argmax(q_values)
             obs, reward, done = test_env.step(action)
             self.last_obs = obs
-        return self.last_obs[:,:,:4], reward
+            reward_sum += reward
+        if not done:
+            # Run a pen finish
+            action = 1
+            obs, reward, done = test_env.step(action)
+            self.last_obs = obs
+            reward_sum += reward
+        return self.last_obs[:,:,:4], reward_sum
     
     def test(self, test_env, num_test_samples):
         results, rewards = [], []

@@ -2,9 +2,9 @@ import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.morphology import binary_fill_holes
 
-PEN_DOWN = 0
-PEN_UP = 1
-FINISH = 2
+PEN_DOWN = 2
+PEN_UP = 0
+FINISH = 1
 
 class Environment():
     # Pulls in new images with generator_fn

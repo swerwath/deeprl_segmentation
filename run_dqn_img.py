@@ -15,8 +15,10 @@ TRAIN_DATA_DIR = "train"
 
 def img_segment_learn(env,
                 session,
-                num_timesteps):
+                num_timesteps,
+                progress_dir):
     # This is just a rough estimate
+    # Store logged images in progress_dir
     num_iterations = float(num_timesteps) / 4.0
 
     lr_multiplier = 1.0
@@ -53,7 +55,8 @@ def img_segment_learn(env,
         learning_freq=4,
         target_update_freq=10000,
         grad_norm_clipping=10,
-        double_q=False
+        double_q=False,
+        progress_dir=progress_dir
     )
 
 def get_available_gpus():
@@ -71,15 +74,17 @@ def get_session():
     return session
 
 
-def main():
+def main(): 
     # Run training
     env = Environment(generator_fn(), img_shape=(256,256,3))
     #test_env = Environment(test_generator_fn)
     session = get_session()
-    alg = img_segment_learn(env, session, num_timesteps=2e8)
-    training_results, training_rewards = alg.test(env, num_test_samples = 1000)
     training_result_dir = '%s/%s/results'%(TRAIN_DATA_DIR,DATA_TYPE)
+    training_progress_dir = '%s/%s/progress'%(TRAIN_DATA_DIR,DATA_TYPE)
+    os.makedirs(training_progress_dir)
     os.makedirs(training_result_dir)
+    alg = img_segment_learn(env, session,num_timesteps=2e8, progress_dir=training_progress_dir)
+    training_results, training_rewards = alg.test(env, num_test_samples = 1000)
     i = 0
     reward_sum = 0
     for result, reward in zip(training_results, training_rewards):
