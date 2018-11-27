@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.morphology import binary_fill_holes
+from skimage import feature
 
 PEN_DOWN = 2
 PEN_UP = 0
@@ -86,7 +87,8 @@ class Environment():
         assert(self.curr_image.shape == self.img_shape)
         assert(self.curr_mask.shape == self.img_shape[:2])
 
-        self.curr_blurred_mask = gaussian_filter(self.curr_mask.astype(np.float32), self.gaussian_std)
+        mask_outline = feature.canny(self.curr_mask.astype(np.float32), sigma=2)
+        self.curr_blurred_mask = gaussian_filter(mask_outline, self.gaussian_std)
         self.curr_mask = self.curr_mask.astype(np.bool_)
         self.state_map = np.zeros((3, self.img_shape[0], self.img_shape[1]), dtype=np.int16)
 
@@ -103,6 +105,7 @@ class Environment():
         rew = 0.0
         for x, y in zip(line_x, line_y):
             rew += self.curr_blurred_mask[x, y]
+            self.curr_blurred_mask[x, y] = 0.0 # Can't get contour reward twice
         return rew / self.alpha
     
     def _region_reward(self):
