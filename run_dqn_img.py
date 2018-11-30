@@ -76,13 +76,13 @@ def get_session():
 
 def main(): 
     # Run training
-    env = Environment(generator_fn(), img_shape=(256,256,3))
+    env = Environment(generator_fn(), img_shape=(128,128,3))
     #test_env = Environment(test_generator_fn)
     session = get_session()
     training_result_dir = '%s/%s/results'%(TRAIN_DATA_DIR,DATA_TYPE)
     training_progress_dir = '%s/%s/progress'%(TRAIN_DATA_DIR,DATA_TYPE)
-    os.makedirs(training_progress_dir)
-    os.makedirs(training_result_dir)
+    #os.makedirs(training_progress_dir)
+    #os.makedirs(training_result_dir)
     alg = img_segment_learn(env, session,num_timesteps=2e8, progress_dir=training_progress_dir)
     training_results, training_rewards = alg.test(env, num_test_samples = 1000)
     i = 0

@@ -59,8 +59,8 @@ class Environment():
                 prev_vertex_y = prev_vertex_y[0]
 
                 # Penalize illegal placements
-                if np.hypot(coord_x - prev_vertex_x, coord_y - prev_vertex_y) > self.max_line_len:
-                    return self._get_state(), -1, False
+                #if np.hypot(coord_x - prev_vertex_x, coord_y - prev_vertex_y) > self.max_line_len:
+                #    return self._get_state(), -1, False
 
                 line_x, line_y = self._get_line_coordinates(prev_vertex_x, prev_vertex_y, coord_x, coord_y)
                 rew = self._contour_reward(line_x, line_y)

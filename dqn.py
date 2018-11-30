@@ -15,7 +15,7 @@ import time
 import logz
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
-img_size = 256
+img_size = 128
 
 class QLearner(object):
 

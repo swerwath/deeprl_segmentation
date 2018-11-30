@@ -6,7 +6,7 @@ import os
 import random
 import numpy as np
 import skimage.io as io
-from multiprocessing import Pool
+import cv2
 
 def getRandomFile(path):
   """
@@ -22,5 +22,5 @@ def generator_fn(num_processes=4, batch_size=128):
     mask_files = [masks_dirs + f + ".npy" for f in files]
     img_mask_pairs = [(io.imread(fname=images_dir + img_file), np.load(mask_file)) for img_file, mask_file in zip(files, mask_files)]
     for img, mask in img_mask_pairs:
-      yield img, mask
+      yield cv2.resize(img, dsize=(128, 128), interpolation=cv2.INTER_CUBIC), cv2.resize(mask, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
     

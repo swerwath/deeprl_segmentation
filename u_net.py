@@ -18,7 +18,7 @@ def deconv(input_layer, filter_size, output_size, out_channel, in_channel, name,
 def build_unet(img_input, scope = "default", reuse = False):
     with tf.variable_scope(scope, reuse=reuse):
         res = img_input #256 x 256
-        res = conv(res, 32 ,3, 'F0', strides = (2,2)) #128 x 128
+        #res = conv(res, 32 ,3, 'F0', strides = (2,2)) #128 x 128
         res = conv(res, 64, 3, 'F1', strides = (2,2)) #64 x 64
         res = conv(res, 128, 3, 'F2', strides = (2,2)) #32 x 32
         res = conv(res, 256, 3, 'F3', strides = (2,2)) #16 x 16
@@ -41,10 +41,10 @@ def build_unet(img_input, scope = "default", reuse = False):
         res = deconv(res, 2, 128, 32, 64, 'B3', [1,2,2,1]) #128 x 128
         res = tf.nn.relu(res)
 
-        res = deconv(res, 2, 256, 16, 32, 'B4', [1,2,2,1]) #256 x 256
-        res = tf.nn.relu(res)
+        #res = deconv(res, 2, 256, 16, 32, 'B4', [1,2,2,1]) #256 x 256
+        #res = tf.nn.relu(res)
 
-        res = deconv(res, 1, 256, 1, 16, 'B5')
+        res = deconv(res, 1, 128, 1, 32, 'B5')
         res = tf.contrib.layers.flatten(res)
         return tf.concat([pen_states, res], axis=1)
 
