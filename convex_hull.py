@@ -24,7 +24,10 @@ class ConvexHullPolicy():
             points = np.argwhere(true_segmentation)
             if len(points) == 0:
                 return 1
-            hull = ConvexHull(points)
+            try:
+                hull = ConvexHull(points)
+            except:
+                return 1
             self.vertices = [points[vertex] for vertex in hull.vertices]
             self.i = 0
             self.done = False        
