@@ -44,17 +44,20 @@ class Environment():
                 self.state_map[2, coord_x, coord_y] = 1
                 self.state_map[1, coord_x, coord_y] = 1
                 rew = self.curr_blurred_mask[coord_x, coord_y] / self.alpha
+                self.last_action = PEN_DOWN
                 return self._get_state(), rew, False
             else:
+                self.last_action = FINISH
                 return self._get_state(), -1.0, True
         elif self.last_action == PEN_DOWN:
             if action_class == PEN_UP:
-                rew = self._finish_polygon(coord_x, coord_y)
+                rew = self._finish_polygon()
                 self.first_vertex = None
+                self.last_action = PEN_UP
                 return self._get_state(), rew, False 
             
             elif action_class == PEN_DOWN:
-                prev_vertex_x, prev_vertex_y = np.where(self.state_map[3] == 1)
+                prev_vertex_x, prev_vertex_y = np.where(self.state_map[2] == 1)
                 prev_vertex_x = prev_vertex_x[0]
                 prev_vertex_y = prev_vertex_y[0]
 
@@ -70,10 +73,12 @@ class Environment():
                 self.state_map[2, prev_vertex_x, prev_vertex_y] = 0
                 self.state_map[2, coord_x, coord_y] = 1
 
+                self.last_action = PEN_DOWN
                 return self._get_state(), rew, False
 
             else:
-                rew = self._finish_polygon(coord_x, coord_y)
+                rew = self._finish_polygon()
+                self.last_action = FINISH
                 return self._get_state(), rew, True
 
         else:
@@ -87,7 +92,7 @@ class Environment():
         assert(self.curr_image.shape == self.img_shape)
         assert(self.curr_mask.shape == self.img_shape[:2])
 
-        mask_outline = feature.canny(self.curr_mask.astype(np.float32), sigma=2)
+        mask_outline = feature.canny(self.curr_mask.astype(np.float32), sigma=2).astype(np.float32)
         self.curr_blurred_mask = gaussian_filter(mask_outline, self.gaussian_std)
         self.curr_mask = self.curr_mask.astype(np.bool_)
         self.state_map = np.zeros((3, self.img_shape[0], self.img_shape[1]), dtype=np.int16)
@@ -122,7 +127,10 @@ class Environment():
         return x.astype(np.int), y.astype(np.int)
     
     # Returns contour reward + region reward for a finished polygon
-    def _finish_polygon(self, last_x, last_y):
+    def _finish_polygon(self):
+        last_x, last_y = np.where(self.state_map[2] == 1)
+        last_x = last_x[0]
+        last_y = last_y[0]
         last_line_x, last_line_y = self._get_line_coordinates(last_x, last_y, self.first_vertex[0], self.first_vertex[1])
         rew = self._contour_reward(last_line_x, last_line_y)
         for x, y in zip(last_line_x, last_line_y):

@@ -18,7 +18,7 @@ def getRandomFile(path):
 
 def generator_fn(num_processes=4, batch_size=128):
   while True:
-    files = [getRandomFile(images_dir)] * batch_size
+    files = [getRandomFile(images_dir) for i in range(batch_size)]
     mask_files = [masks_dirs + f + ".npy" for f in files]
     img_mask_pairs = [(io.imread(fname=images_dir + img_file), np.load(mask_file)) for img_file, mask_file in zip(files, mask_files)]
     for img, mask in img_mask_pairs:

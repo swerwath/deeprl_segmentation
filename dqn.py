@@ -201,7 +201,7 @@ class QLearner(object):
         self.mean_episode_reward      = -float('nan')
         self.best_mean_episode_reward = -float('inf')
         self.last_obs = self.env.reset()
-        self.log_every_n_steps = 10000
+        self.log_every_n_steps = 1000
 
         self.start_time = None
         self.t = 0
