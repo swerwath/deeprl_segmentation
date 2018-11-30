@@ -14,6 +14,8 @@ import os
 import time
 import logz
 
+from convex_hull import ConvexHullPolicy
+
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 img_size = 128
 
@@ -105,6 +107,8 @@ class QLearner(object):
         self.rew_file = str(uuid.uuid4()) + '.pkl' if rew_file is None else rew_file
         self.pixel_limit = pixel_limit
         self.progress_dir = progress_dir
+
+        self.hull_policy = ConvexHullPolicy(img_size)
 
         ###############
         # BUILD MODEL #
@@ -239,7 +243,6 @@ class QLearner(object):
             # Draw finish
             return 1
 
-
     def step_env(self):
         ### 2. Step the env and store the transition
         # At this point, "self.last_obs" contains the latest observation that was
@@ -268,7 +271,8 @@ class QLearner(object):
         buf_idx = self.replay_buffer.store_observation(self.last_obs)
         if not self.model_initialized:
             # Completely random
-            action = self.choose_random_action(self.last_obs)
+            #action = self.choose_random_action(self.last_obs)
+            action = self.hull_policy.get_action(self.last_obs, self.env.curr_mask)
         else:
             epsilon = self.exploration.value(self.t)
             epsilon_flip = np.random.binomial(1, epsilon)
