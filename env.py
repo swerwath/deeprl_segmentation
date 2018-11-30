@@ -32,8 +32,8 @@ class Environment():
         action_class = PEN_DOWN if action > 1 else action
         coord_x, coord_y = (-1,-1)
         if action_class == PEN_DOWN:
-            coord_x = action // self.img_shape[0]
-            coord_y = action % self.img_shape[0]
+            coord_x = (action - 2) // self.img_shape[0]
+            coord_y = (action - 2) % self.img_shape[0]
 
         if self.last_action == PEN_UP:
             if action_class == PEN_UP:
