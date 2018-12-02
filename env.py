@@ -82,7 +82,9 @@ class Environment():
                 return self._get_state(), rew, True
 
         else:
-            raise Exception('Environment is done, should have been reset') 
+            self.reset()
+            return self.step(action)
+            # raise Exception('Environment is done, should have been reset') 
     
     # Returns initial state
     def reset(self):
