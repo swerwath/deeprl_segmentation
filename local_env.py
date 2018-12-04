@@ -1,0 +1,183 @@
+import numpy as np
+from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.morphology import binary_fill_holes
+from skimage import feature
+import random
+
+PEN_DOWN = 2
+PEN_UP = 0
+FINISH = 1
+
+class Environment():
+    # Pulls in new images with generator_fn
+    # generator_fn should return a preprocessed image and a segmentation mask
+    def __init__(self, generator, gaussian_std=2.0, img_shape=(256,256), window_size=32, alpha=0.05, max_line_len=50):
+        self.generator = generator
+        self.gaussian_std = gaussian_std
+        self.img_shape = img_shape
+        self.window_size = window_size
+        self.alpha = alpha
+        self.max_line_len = max_line_len
+
+        self.curr_image = None
+        self.curr_mask = None
+        self.curr_blurred_mask = None
+        self.state_map = None
+        self.last_action = None
+        self.first_vertex = None
+
+        self.reset()
+
+    # Returns (new_state, reward, done)
+    # Action should be int: 0 = pen up, 1 = finish, other = index into array
+    def step(self, action):
+        action_class = PEN_DOWN if action > 1 else action
+        coord_x, coord_y = (-1,-1)
+        min_x, min_y, _, _ = self._get_window_bounds()
+        if action_class == PEN_DOWN:
+            coord_x = min_x + ((action - 2) // self.window_size)
+            coord_y = min_y + ((action - 2) % self.window_size)
+
+        if self.last_action == PEN_UP:
+            if action_class == PEN_UP:
+                return self._get_state(), -1.0, True
+            elif action_class == PEN_DOWN:
+                self.first_vertex = (coord_x, coord_y)
+                self.state_map[2,:,:] = 0
+                self.state_map[2, coord_x, coord_y] = 1
+                self.state_map[1, coord_x, coord_y] = 1
+                rew = self.curr_blurred_mask[coord_x, coord_y] / self.alpha
+                self.last_action = PEN_DOWN
+                return self._get_state(), rew, False
+            else:
+                self.last_action = FINISH
+                return self._get_state(), -1.0, True
+        elif self.last_action == PEN_DOWN:
+            if action_class == PEN_UP:
+                rew = self._finish_polygon()
+                self.first_vertex = None
+                self.last_action = PEN_UP
+                return self._get_state(), rew, True 
+            
+            elif action_class == PEN_DOWN:
+                prev_vertex_x, prev_vertex_y = self._get_last_state()
+
+                # Penalize illegal placements
+                #if np.hypot(coord_x - prev_vertex_x, coord_y - prev_vertex_y) > self.max_line_len:
+                #    return self._get_state(), -1, False
+
+                line_x, line_y = self._get_line_coordinates(prev_vertex_x, prev_vertex_y, coord_x, coord_y)
+                rew = self._contour_reward(line_x, line_y)
+                for x, y in zip(line_x, line_y):
+                    self.state_map[1, x, y] = 1
+                
+                self.state_map[2, prev_vertex_x, prev_vertex_y] = 0
+                self.state_map[2, coord_x, coord_y] = 1
+
+                self.last_action = PEN_DOWN
+                return self._get_state(), rew, False
+
+            else:
+                rew = self._finish_polygon()
+                self.last_action = FINISH
+                return self._get_state(), rew, True
+
+        else:
+            self.reset()
+            return self.step(action)
+            # raise Exception('Environment is done, should have been reset') 
+    
+    # Returns initial state
+    def reset(self):
+        self.curr_image, self.curr_mask = next(self.generator)
+        if len(self.curr_mask.shape) == 3:
+            self.curr_mask = self.curr_mask[:,:,0]
+        assert(self.curr_image.shape == self.img_shape)
+        assert(self.curr_mask.shape == self.img_shape[:2])
+
+        mask_outline = feature.canny(self.curr_mask.astype(np.float32), sigma=2).astype(np.float32)
+        xs, ys = np.where(mask_outline == 1)
+        if len(xs) == 0:
+            return self.reset()
+        i = random.choice(range(len(xs)))
+
+        
+        self.curr_blurred_mask = gaussian_filter(mask_outline, self.gaussian_std)
+        self.curr_mask = self.curr_mask.astype(np.bool_)
+        self.state_map = np.zeros((3, self.img_shape[0], self.img_shape[1]), dtype=np.int16)
+        self.state_map[2, xs[i], ys[i]] = 1
+
+        self.last_action = PEN_UP
+        self.first_vertex = None
+
+        first_state = self._get_state()
+        return first_state
+
+    def _get_last_state(self):
+        prev_vertex_x, prev_vertex_y = np.where(self.state_map[2] == 1)
+        x = prev_vertex_x[0]
+        y = prev_vertex_y[0]
+        return x, y
+    
+    def _get_window_bounds(self):
+        x, y = self._get_last_state()
+        if x < self.window_size / 2:
+            min_x = max(0, x - self.window_size / 2)
+            max_x = min_x + self.window_size
+        else:
+            max_x = min(x + self.window_size / 2, self.img_shape[0])
+            min_x = max_x - self.window_size
+        if y < self.window_size / 2:
+            min_y = max(0, y - self.window_size / 2)
+            max_y = min_y + self.window_size
+        else:
+            max_y = min(y + self.window_size / 2, self.img_shape[1])
+            min_y = max_y - self.window_size
+        return int(min_x), int(min_y), int(max_x), int(max_y)
+
+    def _get_state(self):
+        min_x, min_y, max_x, max_y = self._get_window_bounds()
+
+        full_state = np.concatenate((self.curr_image, np.transpose(self.state_map)), axis=-1)
+        return full_state[min_x:max_x, min_y:max_y, :]
+    
+    def _contour_reward(self, line_x, line_y):
+        rew = 0.0
+        for x, y in zip(line_x, line_y):
+            rew += self.curr_blurred_mask[x, y]
+            self.curr_blurred_mask[x, y] = 0.0 # Can't get contour reward twice
+        return rew / self.alpha
+    
+    def _region_reward(self):
+        assert(self.curr_mask.dtype == np.bool_)
+        mask = self.state_map[1].astype(np.bool_)
+        intersection = (mask * self.curr_mask).sum()
+        union = (mask + self.curr_mask).sum()
+        iou = float(intersection) / float(union)
+        return iou / self.alpha
+
+    def _get_line_coordinates(self, x0, y0, x1, y1):
+        length = int(np.hypot(x1 - x0, y1 - y0))
+        x, y = np.linspace(x0, x1, length), np.linspace(y0, y1, length)
+        return x.astype(np.int), y.astype(np.int)
+    
+    # Returns contour reward + region reward for a finished polygon
+    def _finish_polygon(self):
+        last_x, last_y = self._get_last_state()
+        last_line_x, last_line_y = self._get_line_coordinates(last_x, last_y, self.first_vertex[0], self.first_vertex[1])
+        rew = self._contour_reward(last_line_x, last_line_y)
+        for x, y in zip(last_line_x, last_line_y):
+            self.state_map[1, x, y] = 1
+        # Fill in polygon
+        self.state_map[1] = binary_fill_holes(self.state_map[1])
+        rew += self._region_reward()
+
+        # Add polygon to overall segmentation mask
+        polys = self.state_map[0]
+        polys += self.state_map[1]
+        polys[polys > 1] = 1
+
+        #self.state_map[1,:,:] = 0
+        #self.state_map[2,:,:] = 0
+
+        return rew

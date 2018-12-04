@@ -5,7 +5,8 @@ import random
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
-from env import Environment
+#from env import Environment
+from local_env import Environment
 import dqn
 from dqn_utils import *
 from u_net import build_unet
@@ -76,7 +77,7 @@ def get_session():
 
 def main(): 
     # Run training
-    env = Environment(generator_fn(), img_shape=(128,128,3))
+    env = Environment(generator_fn(), img_shape=(256,256,3))
     #test_env = Environment(test_generator_fn)
     session = get_session()
     training_result_dir = '%s/%s/results'%(TRAIN_DATA_DIR,DATA_TYPE)

@@ -23,5 +23,6 @@ def generator_fn(num_processes=4, batch_size=128):
     img_mask_pairs = [(io.imread(fname=images_dir + img_file), np.load(mask_file)) for img_file, mask_file in zip(files, mask_files)]
     for img, mask in img_mask_pairs:
       if img.shape == (256, 256, 3):
-        yield cv2.resize(img, dsize=(128, 128), interpolation=cv2.INTER_CUBIC), cv2.resize(mask, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
+        yield img, mask
+        #yield cv2.resize(img, dsize=(32, 32), interpolation=cv2.INTER_CUBIC), cv2.resize(mask, dsize=(32, 32), interpolation=cv2.INTER_CUBIC)
     

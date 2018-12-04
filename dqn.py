@@ -17,7 +17,8 @@ import logz
 from convex_hull import ConvexHullPolicy
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
-img_size = 128
+img_size = 256
+window_size = 32
 
 class QLearner(object):
 
@@ -115,8 +116,8 @@ class QLearner(object):
         ###############
 
         
-        input_shape = (img_size, img_size, 6)
-        action_dim = 2 + img_size * img_size
+        input_shape = (window_size, window_size, 6)
+        action_dim = 2 + window_size * window_size
         
         # set up placeholders
         # placeholder for current observation (or state)
@@ -235,7 +236,7 @@ class QLearner(object):
                 x_min, y_min = max(0, pen_x - self.pixel_limit//2), max(0, pen_y - self.pixel_limit//2)
                 x_max, y_max = min(pen_x + self.pixel_limit//2, x_dim - 1),  min(pen_y + self.pixel_limit//2, y_dim - 1)
                 x_rnd, y_rnd = np.random.randint(x_min, x_max), np.random.randint(y_min, y_max)
-            return 2 + x_rnd * img_size + y_rnd
+            return 2 + x_rnd * window_size + y_rnd
         elif epsilon_flip < 2/3:
             # Pen up
             return 0
@@ -271,8 +272,8 @@ class QLearner(object):
         buf_idx = self.replay_buffer.store_observation(self.last_obs)
         if not self.model_initialized:
             # Completely random
-            #action = self.choose_random_action(self.last_obs)
-            action = self.hull_policy.get_action(self.last_obs, self.env.curr_mask)
+            action = self.choose_random_action(self.last_obs)
+            #action = self.hull_policy.get_action(self.last_obs, self.env.curr_mask)
         else:
             epsilon = self.exploration.value(self.t)
             epsilon_flip = np.random.binomial(1, epsilon)
