@@ -405,7 +405,8 @@ class QLearner(object):
             obs, reward, done = test_env.step(action)
             self.last_obs = obs
             reward_sum += reward
-        return self.last_obs[:,:,:4], reward_sum
+        #return self.last_obs[:,:,:4], reward_sum
+        return test_env.state_map, reward_sum
     
     def test(self, test_env, num_test_samples):
         results, rewards = [], []
