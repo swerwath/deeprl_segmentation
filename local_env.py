@@ -137,9 +137,10 @@ class Environment():
 
     def _get_state(self):
         min_x, min_y, max_x, max_y = self._get_window_bounds()
-
-        full_state = np.concatenate((self.curr_image, np.transpose(self.state_map)), axis=-1)
-        return full_state[min_x:max_x, min_y:max_y, :]
+        return np.concatenate((self.curr_image, np.transpose(self.state_map)), axis=-1)[min_x:max_x, min_y:max_y, :]
+    
+    def get_full_state(self):
+        return np.concatenate((self.curr_image, np.transpose(self.state_map)), axis=-1)
     
     def _contour_reward(self, line_x, line_y):
         rew = 0.0
