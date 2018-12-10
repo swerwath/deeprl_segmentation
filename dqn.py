@@ -362,6 +362,7 @@ class QLearner(object):
             episodes = [self.predict(self.env) for i in range(log_episodes)]
             episode_results = [prediction[0] for prediction in episodes]
             episode_rewards = [prediction[1] for prediction in episodes]
+            episode_lengths = [prediction[2] for prediction in episodes]
             self.mean_episode_reward = sum(episode_rewards)/len(episode_rewards)
             self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
             print("Timestep %d" % (self.t,))
@@ -369,6 +370,7 @@ class QLearner(object):
             print("best mean reward %f" % self.best_mean_episode_reward)
             print("exploration %f" % self.exploration.value(self.t))
             print("learning_rate %f" % self.optimizer_spec.lr_schedule.value(self.t))
+            print("Episode lengths ", episode_lengths)
             if self.start_time is not None:
                 print("running time %f" % ((time.time() - self.start_time) / 60.))
             self.start_time = time.time()
@@ -407,7 +409,7 @@ class QLearner(object):
             self.last_obs = obs
             reward_sum += reward
         #return self.last_obs[:,:,:4], reward_sum
-        return test_env.get_full_state(), reward_sum
+        return test_env.get_full_state(), reward_sum, count
     
     def test(self, test_env, num_test_samples):
         results, rewards = [], []
