@@ -136,8 +136,8 @@ class QLearner(object):
         self.done_mask_ph          = tf.placeholder(tf.float32, [None])
 
         # casting to float on GPU ensures lower data transfer times.
-        obs_t_float   = tf.cast(self.obs_t_ph,   tf.float32) / 255.0
-        obs_tp1_float = tf.cast(self.obs_tp1_ph, tf.float32) / 255.0
+        self.obs_t_float   = tf.cast(self.obs_t_ph,   tf.float32) / 255.0
+        self.obs_tp1_float = tf.cast(self.obs_tp1_ph, tf.float32) / 255.0
 
         # Here, you should fill in your own code to compute the Bellman error. This requires
         # evaluating the current and next Q-values and constructing the corresponding error.
@@ -159,19 +159,20 @@ class QLearner(object):
         ######
 
         # YOUR CODE HERE
-        self.q_action = q_func(obs_t_float, 'q_func', reuse=False)
-        self.target_q_action = q_func(obs_tp1_float, 'target_func', reuse=False)
+        curr_q_eval = q_func(self.obs_t_float, scope="q_func", reuse=False)
+        self.q_action = q_func(self.obs_t_float, 'q_func', reuse=True)
+        target_q_action = q_func(self.obs_tp1_float, 'target_func', reuse=False)
         if double_q:
-            target_actions = tf.argmax(self.q_action, output_type=tf.int32)
-            action_idx = tf.stack([tf.range(0, tf.shape(self.q_action)[0]), target_actions], axis=1)
-            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.gather_nd(self.target_q_action, action_idx))
+            target_actions = tf.argmax(curr_q_eval, output_type=tf.int32)
+            action_idx = tf.stack([tf.range(0, tf.shape(curr_q_eval)[0]), target_actions], axis=1)
+            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.gather_nd(target_q_action, action_idx))
         else:
-            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.reduce_max(self.target_q_action))
+            gamma_max_future_q_targets = tf.scalar_mul(gamma, tf.reduce_max(target_q_action))
         
         q_targets = tf.stop_gradient(tf.add(self.rew_t_ph, gamma_max_future_q_targets - tf.multiply(self.done_mask_ph, gamma_max_future_q_targets)))
         idx = tf.range(0, tf.shape(self.act_t_ph)[0])
         cat_idx = tf.stack([idx, self.act_t_ph], axis=1)
-        current_q_values = tf.gather_nd(self.q_action, cat_idx)
+        current_q_values = tf.gather_nd(curr_q_eval, cat_idx)
         self.total_error = tf.reduce_sum(huber_loss(current_q_values - q_targets))
         q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
         target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_func')
