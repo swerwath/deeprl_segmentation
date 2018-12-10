@@ -414,7 +414,7 @@ class QLearner(object):
     def test(self, test_env, num_test_samples):
         results, rewards = [], []
         for sample in range(num_test_samples):
-            curr_result, curr_reward = self.predict(test_env)
+            curr_result, curr_reward, _ = self.predict(test_env)
             results.append(curr_result)
             rewards.append(curr_reward)
         return results, rewards
