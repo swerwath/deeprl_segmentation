@@ -95,7 +95,7 @@ class Environment():
         assert(self.curr_mask.shape == self.img_shape[:2])
 
         mask_outline = feature.canny(self.curr_mask.astype(np.float32), sigma=2).astype(np.float32)
-        self.curr_blurred_mask = gaussian_filter(mask_outline, self.gaussian_std)
+        self.curr_blurred_mask = gaussian_filter(mask_outline, self.gaussian_std) - 0.1
         self.curr_mask = self.curr_mask.astype(np.bool_)
         self.state_map = np.zeros((3, self.img_shape[0], self.img_shape[1]), dtype=np.int16)
 
