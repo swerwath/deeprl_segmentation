@@ -108,3 +108,6 @@ venv.bak/
 /val2017
 /cocoapi
 /proc/
+
+# Visual Studio Code stuff
+.vscode/
