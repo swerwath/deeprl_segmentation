@@ -222,7 +222,7 @@ class QLearner(object):
     def stopping_criterion_met(self):
         return self.t >= self.total_time_steps
 
-    def choose_random_action(self, last_obs):
+    def choose_random_action(self, last_obs, epsilon):
         # Randomly selects a legal action
         epsilon_flip = np.random.uniform()
         if epsilon_flip < 1/3:
@@ -236,7 +236,17 @@ class QLearner(object):
             else:
                 x_min, y_min = max(0, pen_x - self.pixel_limit//2), max(0, pen_y - self.pixel_limit//2)
                 x_max, y_max = min(pen_x + self.pixel_limit//2, x_dim - 1),  min(pen_y + self.pixel_limit//2, y_dim - 1)
-                x_rnd, y_rnd = np.random.randint(x_min, x_max), np.random.randint(y_min, y_max)
+                distance_based_exploration_th = 0.01
+                if epsilon > distance_based_exploration_th:
+                    # Explore geometrically, giving points further from pen current x and y locations preference,
+                    # weighted by the current exploration factor
+                    x_range, y_range = np.arange(x_min, x_max), np.arange(y_min, y_max)
+                    smoothing_factor = 1
+                    x_weights, y_weights = np.abs(pen_x - x_range)*epsilon + smoothing_factor, np.abs(pen_y - y_range)*epsilon + smoothing_factor
+                    x_p, y_p = x_weights/sum(x_weights), y_weights/sum(y_weights)
+                    x_rnd, y_rnd = np.random.choice(x_range, p=x_p), np.random.choice(y_range, p=y_p)
+                else:
+                    x_rnd, y_rnd = np.random.randint(x_min, x_max), np.random.randint(y_min, y_max)
             return 2 + x_rnd * window_size + y_rnd
         elif epsilon_flip < 2/3:
             # Pen up
@@ -271,15 +281,15 @@ class QLearner(object):
 
         # YOUR CODE HERE
         buf_idx = self.replay_buffer.store_observation(self.last_obs)
+        epsilon = self.exploration.value(self.t)
         if not self.model_initialized:
             # Completely random
-            action = self.choose_random_action(self.last_obs)
+            action = self.choose_random_action(self.last_obs, epsilon)
             #action = self.hull_policy.get_action(self.last_obs, self.env.curr_mask)
         else:
-            epsilon = self.exploration.value(self.t)
             epsilon_flip = np.random.binomial(1, epsilon)
             if epsilon_flip == 1:
-                action = self.choose_random_action(self.last_obs)
+                action = self.choose_random_action(self.last_obs, epsilon)
             else:
                 q_values = self.session.run(tf.squeeze(self.q_action), {self.obs_t_ph: np.expand_dims(self.last_obs, axis=0)})
                 action = np.argmax(q_values)
