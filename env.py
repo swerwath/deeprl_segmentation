@@ -121,7 +121,7 @@ class Environment():
         intersection = (mask * self.curr_mask).sum()
         union = (mask + self.curr_mask).sum()
         iou = float(intersection) / float(union)
-        return iou
+        return iou / self.alpha
 
     def _get_line_coordinates(self, x0, y0, x1, y1):
         length = int(np.hypot(x1 - x0, y1 - y0))
